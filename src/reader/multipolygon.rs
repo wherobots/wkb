@@ -5,6 +5,10 @@ use crate::reader::polygon::Polygon;
 use crate::reader::util::{has_srid, ReadBytesExt};
 use crate::Endianness;
 use geo_traits::MultiPolygonTrait;
+use geo_traits_ext::{
+    forward_multi_polygon_trait_ext_funcs, GeoTraitExtWithTypeTag, MultiPolygonTag,
+    MultiPolygonTraitExt,
+};
 
 /// skip endianness and wkb type
 const HEADER_BYTES: u64 = 5;
@@ -102,4 +106,26 @@ impl<'a, 'b> MultiPolygonTrait for &'b MultiPolygon<'a> {
     unsafe fn polygon_unchecked(&self, i: usize) -> Self::InnerPolygonType<'_> {
         self.wkb_polygons.get_unchecked(i)
     }
+}
+
+impl MultiPolygonTraitExt for MultiPolygon<'_> {
+    forward_multi_polygon_trait_ext_funcs!();
+}
+
+impl GeoTraitExtWithTypeTag for MultiPolygon<'_> {
+    type Tag = MultiPolygonTag;
+}
+
+impl<'a, 'b> MultiPolygonTraitExt for &'b MultiPolygon<'a>
+where
+    'a: 'b,
+{
+    forward_multi_polygon_trait_ext_funcs!();
+}
+
+impl<'a, 'b> GeoTraitExtWithTypeTag for &'b MultiPolygon<'a>
+where
+    'a: 'b,
+{
+    type Tag = MultiPolygonTag;
 }

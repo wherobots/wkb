@@ -5,6 +5,9 @@ use crate::reader::linearring::WKBLinearRing;
 use crate::reader::util::{has_srid, ReadBytesExt};
 use crate::Endianness;
 use geo_traits::PolygonTrait;
+use geo_traits_ext::{
+    forward_polygon_trait_ext_funcs, GeoTraitExtWithTypeTag, PolygonTag, PolygonTraitExt,
+};
 
 /// skip endianness and wkb type
 const HEADER_BYTES: u64 = 5;
@@ -127,4 +130,20 @@ impl<'a, 'b> PolygonTrait for &'b Polygon<'a> {
     unsafe fn interior_unchecked(&self, i: usize) -> Self::RingType<'_> {
         self.wkb_linear_rings.get_unchecked(i + 1)
     }
+}
+
+impl PolygonTraitExt for Polygon<'_> {
+    forward_polygon_trait_ext_funcs!();
+}
+
+impl GeoTraitExtWithTypeTag for Polygon<'_> {
+    type Tag = PolygonTag;
+}
+
+impl PolygonTraitExt for &Polygon<'_> {
+    forward_polygon_trait_ext_funcs!();
+}
+
+impl GeoTraitExtWithTypeTag for &Polygon<'_> {
+    type Tag = PolygonTag;
 }

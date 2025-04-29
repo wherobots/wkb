@@ -5,6 +5,9 @@ use crate::reader::point::Point;
 use crate::reader::util::{has_srid, ReadBytesExt};
 use crate::Endianness;
 use geo_traits::MultiPointTrait;
+use geo_traits_ext::{
+    forward_multi_point_trait_ext_funcs, GeoTraitExtWithTypeTag, MultiPointTag, MultiPointTraitExt,
+};
 
 /// A WKB MultiPoint
 ///
@@ -112,4 +115,26 @@ impl<'a> MultiPointTrait for &MultiPoint<'a> {
             self.dim,
         )
     }
+}
+
+impl MultiPointTraitExt for MultiPoint<'_> {
+    forward_multi_point_trait_ext_funcs!();
+}
+
+impl GeoTraitExtWithTypeTag for MultiPoint<'_> {
+    type Tag = MultiPointTag;
+}
+
+impl<'a, 'b> MultiPointTraitExt for &'b MultiPoint<'a>
+where
+    'a: 'b,
+{
+    forward_multi_point_trait_ext_funcs!();
+}
+
+impl<'a, 'b> GeoTraitExtWithTypeTag for &'b MultiPoint<'a>
+where
+    'a: 'b,
+{
+    type Tag = MultiPointTag;
 }

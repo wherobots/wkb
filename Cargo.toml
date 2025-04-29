@@ -14,6 +14,8 @@ rust-version = "1.82"
 [dependencies]
 byteorder = "1"
 geo-traits = "0.2"
+geo-types = "0.7.16"
+geo-traits-ext = { git = "https://github.com/wherobots/geo", branch = "generic-alg", package = "geo-traits-ext" }
 num_enum = "0.7"
 thiserror = "1"
 
@@ -21,7 +23,7 @@ thiserror = "1"
 approx = "0.5.1"
 bytes = "1.5.0"
 criterion = { version = "0.5", features = ["html_reports"] }
-geo-types = "0.7.13"
+geo-generic-alg = { git = "https://github.com/wherobots/geo", branch = "generic-alg", package = "geo-generic-alg" }
 geos = { version = "10", features = ["geo"] }
 wkt = "0.13"
 
@@ -33,5 +35,7 @@ harness = false
 doctest = true
 
 [patch.crates-io]
-geo-traits = { git = "https://github.com/georust/geo", branch = "main", package = "geo-traits" }
+geo-traits = { git = "https://github.com/wherobots/geo", branch = "generic-alg", package = "geo-traits" }
+geo-types = { git = "https://github.com/wherobots/geo", branch = "generic-alg", package = "geo-types" }
+geo-traits-ext = { git = "https://github.com/wherobots/geo", branch = "generic-alg", package = "geo-traits-ext" }
 wkt = { git = "https://github.com/wherobots/wkt", branch = "adapt-new-geo-traits" }

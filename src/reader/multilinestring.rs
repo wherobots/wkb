@@ -5,6 +5,10 @@ use crate::reader::linestring::LineString;
 use crate::reader::util::{has_srid, ReadBytesExt};
 use crate::Endianness;
 use geo_traits::MultiLineStringTrait;
+use geo_traits_ext::{
+    forward_multi_line_string_trait_ext_funcs, GeoTraitExtWithTypeTag, MultiLineStringTag,
+    MultiLineStringTraitExt,
+};
 
 const HEADER_BYTES: u64 = 5;
 
@@ -103,4 +107,26 @@ impl<'a, 'b> MultiLineStringTrait for &'b MultiLineString<'a> {
     unsafe fn line_string_unchecked(&self, i: usize) -> Self::InnerLineStringType<'_> {
         self.wkb_line_strings.get_unchecked(i)
     }
+}
+
+impl MultiLineStringTraitExt for MultiLineString<'_> {
+    forward_multi_line_string_trait_ext_funcs!();
+}
+
+impl GeoTraitExtWithTypeTag for MultiLineString<'_> {
+    type Tag = MultiLineStringTag;
+}
+
+impl<'a, 'b> MultiLineStringTraitExt for &'b MultiLineString<'a>
+where
+    'a: 'b,
+{
+    forward_multi_line_string_trait_ext_funcs!();
+}
+
+impl<'a, 'b> GeoTraitExtWithTypeTag for &'b MultiLineString<'a>
+where
+    'a: 'b,
+{
+    type Tag = MultiLineStringTag;
 }

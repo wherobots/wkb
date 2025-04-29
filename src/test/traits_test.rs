@@ -1,0 +1,192 @@
+use geo_traits::*;
+use geos::WKBWriter;
+
+use crate::reader::read_wkb;
+
+use super::data::*;
+#[cfg(test)]
+mod tests {
+    use geo_generic_alg::area::Area;
+    use geo_generic_alg::intersects::Intersects;
+    use geo_generic_alg::*;
+
+    use super::*;
+
+    #[test]
+    fn test_intersects_trait() {
+        let orig = point_2d();
+        let buf = geo_to_wkb(orig);
+        let wkb = read_wkb(&buf).unwrap();
+
+        let orig2 = linestring_2d();
+        let buf2 = geo_to_wkb(orig2);
+        let wkb2 = read_wkb(&buf2).unwrap();
+
+        match (wkb.as_type(), wkb2.as_type()) {
+            (geo_traits::GeometryType::Point(pt), geo_traits::GeometryType::Point(pt2)) => {
+                let area = pt.signed_area();
+                assert_eq!(area, 0.0);
+                let area = pt.unsigned_area();
+                assert_eq!(area, 0.0);
+
+                let intersects = pt.intersects(&pt2);
+                assert!(intersects);
+            }
+            (geo_traits::GeometryType::Point(pt), geo_traits::GeometryType::LineString(ls)) => {
+                let area = ls.signed_area();
+                assert_eq!(area, 0.0);
+                let area = ls.unsigned_area();
+                assert_eq!(area, 0.0);
+
+                let intersects = pt.intersects(&ls);
+                assert!(intersects);
+            }
+            (geo_traits::GeometryType::LineString(ls), geo_traits::GeometryType::Point(pt)) => {
+                let intersects = ls.intersects(&pt);
+                assert!(intersects);
+            }
+            (
+                geo_traits::GeometryType::LineString(ls),
+                geo_traits::GeometryType::LineString(ls2),
+            ) => {
+                let intersects = ls.intersects(&ls2);
+                assert!(intersects);
+            }
+            _ => panic!("Expected a Point"),
+        }
+    }
+
+    #[test]
+    fn test_point_trait() {
+        let orig = point_2d();
+        let buf = geo_to_wkb(orig);
+        let wkb = read_wkb(&buf).unwrap();
+        assert_eq!(wkb.dim(), geo_traits::Dimensions::Xy);
+
+        let geom_trait = wkb.as_type();
+        match geom_trait {
+            geo_traits::GeometryType::Point(pt) => {
+                let coord = pt.coord().unwrap();
+                assert_eq!(coord.x(), orig.0.x);
+                assert_eq!(coord.y(), orig.0.y);
+
+                // coord.bounding_rect();
+            }
+            _ => panic!("Expected a Point"),
+        }
+    }
+
+    #[test]
+    fn test_line_string_trait() {
+        let orig = linestring_2d();
+        let buf = geo_to_wkb(orig.clone());
+        let wkb = read_wkb(&buf).unwrap();
+        assert_eq!(wkb.dim(), geo_traits::Dimensions::Xy);
+
+        let area = wkb.signed_area();
+        assert_eq!(area, 0.0);
+
+        match wkb.as_type() {
+            geo_traits::GeometryType::LineString(ls) => {
+                assert_eq!(ls.num_coords(), orig.0.len());
+                let area = ls.signed_area();
+                assert_eq!(area, 0.0);
+            }
+            _ => panic!("Expected a LineString"),
+        }
+    }
+
+    #[test]
+    fn test_polygon_trait() {
+        let orig = polygon_2d();
+        let buf = geo_to_wkb(orig.clone());
+        let wkb = read_wkb(&buf).unwrap();
+        assert_eq!(wkb.dim(), geo_traits::Dimensions::Xy);
+
+        let area = wkb.signed_area();
+        assert_eq!(area, 28.0);
+
+        match wkb.as_type() {
+            geo_traits::GeometryType::Polygon(p) => {
+                assert_eq!(p.exterior().unwrap().num_coords(), orig.exterior().0.len());
+                let area = p.signed_area();
+                assert_eq!(area, 28.0);
+            }
+            _ => panic!("Expected a Polygon"),
+        }
+    }
+
+    #[test]
+    fn test_geometry_collection_trait() {
+        let orig = geometry_collection_2d();
+        let buf = geo_to_wkb(orig.clone());
+        let wkb = read_wkb(&buf).unwrap();
+        assert_eq!(wkb.dim(), geo_traits::Dimensions::Xy);
+
+        match wkb.as_type() {
+            geo_traits::GeometryType::GeometryCollection(gc) => {
+                assert_eq!(gc.num_geometries(), orig.0.len());
+
+                gc.geometries()
+                    .zip(orig.0.iter())
+                    .for_each(|(geom, orig_geom)| match (geom.as_type(), orig_geom) {
+                        (geo_traits::GeometryType::Point(pt), Geometry::Point(orig_pt)) => {
+                            assert_eq!(pt.coord().unwrap().x(), orig_pt.0.x);
+                            assert_eq!(pt.coord().unwrap().y(), orig_pt.0.y);
+                        }
+                        (
+                            geo_traits::GeometryType::LineString(ls),
+                            Geometry::LineString(orig_ls),
+                        ) => {
+                            assert_eq!(ls.num_coords(), orig_ls.0.len());
+                        }
+                        (geo_traits::GeometryType::Polygon(p), Geometry::Polygon(orig_p)) => {
+                            assert_eq!(
+                                p.exterior().unwrap().num_coords(),
+                                orig_p.exterior().0.len()
+                            );
+                        }
+                        (
+                            geo_traits::GeometryType::MultiPoint(mp),
+                            Geometry::MultiPoint(orig_mp),
+                        ) => {
+                            assert_eq!(mp.num_points(), orig_mp.0.len());
+                        }
+                        (
+                            geo_traits::GeometryType::MultiLineString(mls),
+                            Geometry::MultiLineString(orig_mls),
+                        ) => {
+                            assert_eq!(mls.num_line_strings(), orig_mls.0.len());
+                        }
+                        (
+                            geo_traits::GeometryType::MultiPolygon(mp),
+                            Geometry::MultiPolygon(orig_mp),
+                        ) => {
+                            assert_eq!(mp.num_polygons(), orig_mp.0.len());
+                        }
+                        (
+                            geo_traits::GeometryType::GeometryCollection(gc),
+                            Geometry::GeometryCollection(orig_gc),
+                        ) => {
+                            assert_eq!(gc.num_geometries(), orig_gc.0.len());
+                        }
+                        _ => panic!("Expected a Point"),
+                    });
+            }
+            _ => panic!("Expected a GeometryCollection"),
+        }
+    }
+
+    fn geo_to_wkb<G>(geo: G) -> Vec<u8>
+    where
+        G: TryInto<geos::Geometry>,
+    {
+        let geos_geom: geos::Geometry = match geo.try_into() {
+            Ok(geos_geom) => geos_geom,
+            Err(_) => panic!("Failed to convert to geos::Geometry"),
+        };
+
+        let mut wkb_writer = WKBWriter::new().unwrap();
+        wkb_writer.write_wkb(&geos_geom).unwrap().into()
+    }
+}

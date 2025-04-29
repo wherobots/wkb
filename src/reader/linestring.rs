@@ -2,9 +2,15 @@ use std::io::Cursor;
 
 use crate::common::WKBDimension;
 use crate::reader::coord::Coord;
+use crate::reader::coord_iter::*;
 use crate::reader::util::{has_srid, ReadBytesExt};
 use crate::Endianness;
+use byteorder::{BigEndian, ByteOrder, LittleEndian};
 use geo_traits::LineStringTrait;
+use geo_traits_ext::forward_line_string_trait_ext_funcs;
+use geo_traits_ext::LineStringTraitExt;
+use geo_traits_ext::{GeoTraitExtWithTypeTag, LineStringTag};
+use geo_types::{Coord as GeoCoord, Line};
 
 const HEADER_BYTES: u64 = 5;
 
@@ -70,6 +76,47 @@ impl<'a> LineString<'a> {
     pub fn dimension(&self) -> WKBDimension {
         self.dim
     }
+
+    // Create a coordinate iterator with compile-time endianness
+    #[inline]
+    fn create_coord_iter<B: ByteOrder>(&self) -> CoordIter<'a, B> {
+        CoordIter::new(
+            self.buf,
+            self.coord_offset(0) as usize,
+            self.num_points,
+            self.dim.size(),
+        )
+    }
+
+    // Create a line iterator with compile-time endianness
+    #[inline]
+    fn create_line_iter<B: ByteOrder>(&self) -> LineIter<'a, B> {
+        LineIter::new(
+            self.buf,
+            self.coord_offset(0) as usize,
+            self.num_points,
+            self.dim.size(),
+        )
+    }
+
+    // Helper methods that return enum-based iterators based on endianness
+    #[inline]
+    fn get_coord_iter(&self) -> EndianCoordIter<'a> {
+        match self.byte_order {
+            Endianness::LittleEndian => {
+                EndianCoordIter::LE(self.create_coord_iter::<LittleEndian>())
+            }
+            Endianness::BigEndian => EndianCoordIter::BE(self.create_coord_iter::<BigEndian>()),
+        }
+    }
+
+    #[inline]
+    fn get_line_iter(&self) -> EndianLineIter<'a> {
+        match self.byte_order {
+            Endianness::LittleEndian => EndianLineIter::LE(self.create_line_iter::<LittleEndian>()),
+            Endianness::BigEndian => EndianLineIter::BE(self.create_line_iter::<BigEndian>()),
+        }
+    }
 }
 
 impl<'a> LineStringTrait for LineString<'a> {
@@ -110,4 +157,40 @@ impl<'a> LineStringTrait for &LineString<'a> {
             self.dim,
         )
     }
+}
+
+impl LineStringTraitExt for LineString<'_> {
+    forward_line_string_trait_ext_funcs!();
+
+    #[inline(always)]
+    fn lines(&'_ self) -> impl ExactSizeIterator<Item = Line<f64>> + '_ {
+        self.get_line_iter()
+    }
+
+    #[inline(always)]
+    fn coord_iter(&self) -> impl Iterator<Item = GeoCoord<f64>> {
+        self.get_coord_iter()
+    }
+}
+
+impl GeoTraitExtWithTypeTag for LineString<'_> {
+    type Tag = LineStringTag;
+}
+
+impl LineStringTraitExt for &LineString<'_> {
+    forward_line_string_trait_ext_funcs!();
+
+    #[inline(always)]
+    fn lines(&'_ self) -> impl ExactSizeIterator<Item = Line<f64>> + '_ {
+        (*self).get_line_iter()
+    }
+
+    #[inline(always)]
+    fn coord_iter(&self) -> impl Iterator<Item = GeoCoord<f64>> {
+        (*self).get_coord_iter()
+    }
+}
+
+impl GeoTraitExtWithTypeTag for &LineString<'_> {
+    type Tag = LineStringTag;
 }

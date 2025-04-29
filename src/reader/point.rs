@@ -3,6 +3,9 @@ use crate::reader::coord::Coord;
 use crate::reader::util::has_srid;
 use crate::Endianness;
 use geo_traits::{CoordTrait, PointTrait};
+use geo_traits_ext::{
+    forward_point_trait_ext_funcs, GeoTraitExtWithTypeTag, PointTag, PointTraitExt,
+};
 
 /// A WKB Point.
 ///
@@ -99,4 +102,20 @@ impl<'a> PointTrait for &Point<'a> {
             Some(self.coord)
         }
     }
+}
+
+impl PointTraitExt for Point<'_> {
+    forward_point_trait_ext_funcs!();
+}
+
+impl GeoTraitExtWithTypeTag for Point<'_> {
+    type Tag = PointTag;
+}
+
+impl PointTraitExt for &Point<'_> {
+    forward_point_trait_ext_funcs!();
+}
+
+impl GeoTraitExtWithTypeTag for &Point<'_> {
+    type Tag = PointTag;
 }

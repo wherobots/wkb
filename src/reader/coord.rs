@@ -4,6 +4,7 @@ use crate::common::WKBDimension;
 use crate::reader::util::ReadBytesExt;
 use crate::Endianness;
 use geo_traits::{CoordTrait, Dimensions};
+use geo_traits_ext::{CoordTag, CoordTraitExt, GeoTraitExtWithTypeTag};
 
 const F64_WIDTH: u64 = 8;
 
@@ -101,4 +102,10 @@ impl CoordTrait for Coord<'_> {
     fn y(&self) -> Self::T {
         self.get_y()
     }
+}
+
+impl CoordTraitExt for Coord<'_> {}
+
+impl GeoTraitExtWithTypeTag for Coord<'_> {
+    type Tag = CoordTag;
 }
