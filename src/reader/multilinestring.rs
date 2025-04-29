@@ -81,7 +81,7 @@ impl<'a> MultiLineString<'a> {
 
 impl<'a> MultiLineStringTrait for MultiLineString<'a> {
     type InnerLineStringType<'b>
-        = LineString<'a>
+        = &'b LineString<'a>
     where
         Self: 'b;
 
@@ -90,7 +90,7 @@ impl<'a> MultiLineStringTrait for MultiLineString<'a> {
     }
 
     unsafe fn line_string_unchecked(&self, i: usize) -> Self::InnerLineStringType<'_> {
-        *self.wkb_line_strings.get_unchecked(i)
+        self.wkb_line_strings.get_unchecked(i)
     }
 }
 
