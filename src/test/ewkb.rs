@@ -1,5 +1,8 @@
 use geo_traits::to_geo::ToGeoGeometry;
-use geo_types::Geometry;
+use geo_traits_ext::{
+    GeometryTraitExt, GeometryTypeExt, LineStringTraitExt, PointTraitExt, PolygonTraitExt,
+};
+use geo_types::{line_string, Geometry};
 use geos::WKBWriter;
 
 use crate::reader::read_wkb;
@@ -148,4 +151,82 @@ fn read_geometry_collection() {
         Geometry::GeometryCollection(orig.clone()),
         retour.to_geometry()
     );
+}
+
+#[test]
+fn read_point_geo_coord() {
+    let orig = point_2d();
+    let geos_geom: geos::Geometry = (&orig).try_into().unwrap();
+    let mut wkb_writer = WKBWriter::new().unwrap();
+    let byte_orders = [geos::ByteOrder::LittleEndian, geos::ByteOrder::BigEndian];
+    for byte_order in byte_orders {
+        wkb_writer.set_wkb_byte_order(byte_order);
+        let buf: Vec<u8> = wkb_writer.write_wkb(&geos_geom).unwrap().into();
+        let wkb = read_wkb(&buf).unwrap();
+        if let GeometryTypeExt::Point(pt) = wkb.as_type_ext() {
+            let coord = pt.geo_coord();
+            assert_eq!(coord, Some(orig.0));
+        } else {
+            panic!("Expected a Point");
+        }
+    }
+}
+
+#[test]
+fn line_string_iterator() {
+    let orig = line_string![
+        (x: 0., y: 1.),
+        (x: 1., y: 2.),
+        (x: 2., y: 3.),
+        (x: 3., y: 4.),
+        (x: 4., y: 5.),
+    ];
+    let geos_geom: geos::Geometry = (&orig).try_into().unwrap();
+    let mut wkb_writer = WKBWriter::new().unwrap();
+    let buf: Vec<u8> = wkb_writer.write_wkb(&geos_geom).unwrap().into();
+    let wkb = read_wkb(&buf).unwrap();
+    match wkb.as_type_ext() {
+        GeometryTypeExt::LineString(ls) => {
+            let lines = ls.lines().collect::<Vec<_>>();
+            assert_eq!(lines.len(), 4);
+            for (i, line) in lines.iter().enumerate() {
+                assert_eq!(line.start, orig.0[i]);
+                assert_eq!(line.end, orig.0[i + 1]);
+            }
+
+            let coords = ls.coord_iter().collect::<Vec<_>>();
+            assert_eq!(coords.len(), 5);
+            for (i, coord) in coords.iter().enumerate() {
+                assert_eq!(coord, &orig.0[i]);
+            }
+        }
+        _ => unreachable!(),
+    }
+}
+
+#[test]
+fn linear_ring_iterator() {
+    let orig = polygon_2d();
+    let geos_geom: geos::Geometry = (&orig).try_into().unwrap();
+    let mut wkb_writer = WKBWriter::new().unwrap();
+    let buf: Vec<u8> = wkb_writer.write_wkb(&geos_geom).unwrap().into();
+    let wkb = read_wkb(&buf).unwrap();
+    match wkb.as_type_ext() {
+        GeometryTypeExt::Polygon(poly) => {
+            let lr = poly.exterior_ext().unwrap();
+            let lines = lr.lines().collect::<Vec<_>>();
+            assert_eq!(lines.len(), 4);
+            for (i, line) in lines.iter().enumerate() {
+                assert_eq!(line.start, orig.exterior()[i]);
+                assert_eq!(line.end, orig.exterior()[i + 1]);
+            }
+
+            let coords = lr.coord_iter().collect::<Vec<_>>();
+            assert_eq!(coords.len(), 5);
+            for (i, coord) in coords.iter().enumerate() {
+                assert_eq!(coord, &orig.exterior()[i]);
+            }
+        }
+        _ => unreachable!(),
+    }
 }
