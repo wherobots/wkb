@@ -38,4 +38,4 @@ doctest = true
 geo-traits = { git = "https://github.com/wherobots/geo", branch = "generic-alg", package = "geo-traits" }
 geo-types = { git = "https://github.com/wherobots/geo", branch = "generic-alg", package = "geo-types" }
 geo-traits-ext = { git = "https://github.com/wherobots/geo", branch = "generic-alg", package = "geo-traits-ext" }
-wkt = { git = "https://github.com/wherobots/wkt", branch = "adapt-new-geo-traits" }
+wkt = { git = "https://github.com/wherobots/wkt", branch = "generic-alg" }
