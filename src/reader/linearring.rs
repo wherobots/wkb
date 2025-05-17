@@ -1,6 +1,7 @@
 use std::io::Cursor;
 
 use crate::common::WKBDimension;
+use crate::error::{WKBError, WKBResult};
 use crate::reader::coord::Coord;
 use crate::reader::coord_iter::*;
 use crate::reader::util::ReadBytesExt;
@@ -41,17 +42,49 @@ pub struct WKBLinearRing<'a> {
 
 impl<'a> WKBLinearRing<'a> {
     pub fn new(buf: &'a [u8], byte_order: Endianness, offset: u64, dim: WKBDimension) -> Self {
+        Self::try_new(buf, byte_order, offset, dim).unwrap()
+    }
+
+    pub fn try_new(
+        buf: &'a [u8],
+        byte_order: Endianness,
+        offset: u64,
+        dim: WKBDimension,
+    ) -> WKBResult<Self> {
         let mut reader = Cursor::new(buf);
         reader.set_position(offset);
-        let num_points = reader.read_u32(byte_order).unwrap().try_into().unwrap();
+        let num_points = reader
+            .read_u32(byte_order)?
+            .try_into()
+            .map_err(|e| WKBError::General(format!("Invalid number of points: {}", e)))?;
 
-        Self {
+        let ring = Self {
             buf,
             byte_order,
-            offset,
+            offset, // This offset is where num_points for this ring starts
             num_points,
             dim,
+        };
+
+        // `offset` is the start of the num_points field. `ring.size()` is `4 (for num_points) + coord_data`.
+        let expected_end_abs = offset + ring.size();
+        if expected_end_abs > buf.len() as u64 {
+            return Self::handle_invalid_buffer_length(offset, expected_end_abs, buf.len());
         }
+
+        Ok(ring)
+    }
+
+    #[cold]
+    fn handle_invalid_buffer_length(
+        offset: u64,
+        expected_end_abs: u64,
+        buf_len: usize,
+    ) -> WKBResult<Self> {
+        Err(WKBError::General(format!(
+            "Invalid buffer length for LinearRing: data starting at offset {} would end at byte {}, but buffer length is {}.",
+            offset, expected_end_abs, buf_len
+        )))
     }
 
     /// The number of bytes in this object, including any header
