@@ -1,4 +1,6 @@
 use crate::common::WKBDimension;
+use crate::error::WKBError;
+use crate::error::WKBResult;
 use crate::reader::coord::Coord;
 use crate::reader::util::has_srid;
 use crate::Endianness;
@@ -28,16 +30,30 @@ impl<'a> Point<'a> {
         offset: u64,
         dim: WKBDimension,
     ) -> Self {
-        let has_srid = has_srid(buf, byte_order, offset);
+        Self::try_new(buf, byte_order, offset, dim).unwrap()
+    }
+
+    pub(crate) fn try_new(
+        buf: &'a [u8],
+        byte_order: Endianness,
+        offset: u64,
+        dim: WKBDimension,
+    ) -> WKBResult<Self> {
+        let has_srid = has_srid(buf, byte_order, offset)?;
 
         // The space of the byte order + geometry type
-        let mut offset = offset + 5;
+        let mut current_offset = offset + 5;
         if has_srid {
             // Skip SRID bytes if they exist
-            offset += 4;
+            current_offset += 4;
         }
 
-        let coord = Coord::new(buf, byte_order, offset, dim);
+        let expected_end = current_offset as usize + dim.size() * 8;
+        if buf.len() < expected_end {
+            return Self::handle_invalid_buffer_length(offset, expected_end, buf.len());
+        }
+
+        let coord = Coord::new(buf, byte_order, current_offset, dim);
         let is_empty = (0..coord.dim().size()).all(|coord_dim| {
             {
                 // Safety:
@@ -47,12 +63,24 @@ impl<'a> Point<'a> {
             }
             .is_nan()
         });
-        Self {
+        Ok(Self {
             coord,
             dim,
             is_empty,
             has_srid,
-        }
+        })
+    }
+
+    #[cold]
+    fn handle_invalid_buffer_length(
+        offset: u64,
+        expected_end: usize,
+        buf_len: usize,
+    ) -> WKBResult<Self> {
+        Err(WKBError::General(format!(
+            "Invalid buffer length for Point: geometry starting at offset {} would end at byte {}, but buffer length is {}.",
+            offset, expected_end, buf_len
+        )))
     }
 
     /// The number of bytes in this object, including any header
