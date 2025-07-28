@@ -21,10 +21,10 @@ use geo_types::{Coord as GeoCoord, Line};
 #[derive(Debug, Clone, Copy)]
 pub struct WKBLinearRing<'a> {
     /// The underlying WKB buffer
-    buf: &'a [u8],
+    pub buf: &'a [u8],
 
     /// The byte order of this WKB buffer
-    byte_order: Endianness,
+    pub byte_order: Endianness,
 
     /// The offset into the buffer where this linear ring is located
     ///
@@ -32,12 +32,12 @@ pub struct WKBLinearRing<'a> {
     /// `Point` is immediately after the header, but the `Point` also appears in other geometry
     /// types. I.e. the `LineString` has a header, then the number of points, then a sequence of
     /// `Point` objects.
-    offset: u64,
+    pub offset: u64,
 
     /// The number of points in this linear ring
-    num_points: usize,
+    pub num_points: usize,
 
-    dim: WKBDimension,
+    pub dim: WKBDimension,
 }
 
 impl<'a> WKBLinearRing<'a> {
@@ -56,7 +56,7 @@ impl<'a> WKBLinearRing<'a> {
         let num_points = reader
             .read_u32(byte_order)?
             .try_into()
-            .map_err(|e| WKBError::General(format!("Invalid number of points: {}", e)))?;
+            .map_err(|e| WKBError::General(format!("Invalid number of points: {e}")))?;
 
         let ring = Self {
             buf,
@@ -82,8 +82,7 @@ impl<'a> WKBLinearRing<'a> {
         buf_len: usize,
     ) -> WKBResult<Self> {
         Err(WKBError::General(format!(
-            "Invalid buffer length for LinearRing: data starting at offset {} would end at byte {}, but buffer length is {}.",
-            offset, expected_end_abs, buf_len
+            "Invalid buffer length for LinearRing: data starting at offset {offset} would end at byte {expected_end_abs}, but buffer length is {buf_len}."
         )))
     }
 

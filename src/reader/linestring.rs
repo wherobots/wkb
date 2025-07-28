@@ -20,17 +20,17 @@ const HEADER_BYTES: u64 = 5;
 /// This has been preprocessed, so access to any internal coordinate is `O(1)`.
 #[derive(Debug, Clone, Copy)]
 pub struct LineString<'a> {
-    buf: &'a [u8],
-    byte_order: Endianness,
+    pub buf: &'a [u8],
+    pub byte_order: Endianness,
 
     /// The number of points in this LineString WKB
-    num_points: usize,
+    pub num_points: usize,
 
     /// This offset will be 0 for a single LineString but it will be non zero for a
     /// LineString contained within a MultiLineString
-    offset: u64,
-    dim: WKBDimension,
-    has_srid: bool,
+    pub offset: u64,
+    pub dim: WKBDimension,
+    pub has_srid: bool,
 }
 
 impl<'a> LineString<'a> {
@@ -54,7 +54,7 @@ impl<'a> LineString<'a> {
         let num_points = reader
             .read_u32(byte_order)?
             .try_into()
-            .map_err(|e| WKBError::General(format!("Invalid number of points: {}", e)))?;
+            .map_err(|e| WKBError::General(format!("Invalid number of points: {e}")))?;
 
         let linestring = Self {
             buf,
@@ -84,8 +84,7 @@ impl<'a> LineString<'a> {
         buf_len: usize,
     ) -> WKBResult<Self> {
         Err(WKBError::General(format!(
-            "Invalid buffer length for LineString: geometry starting at offset {} would end at byte {}, but buffer length is {}.",
-            offset, expected_end_abs, buf_len
+            "Invalid buffer length for LineString: geometry starting at offset {offset} would end at byte {expected_end_abs}, but buffer length is {buf_len}."
         )))
     }
 
