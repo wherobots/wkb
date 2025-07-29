@@ -252,9 +252,18 @@ fn save_f64_to_scratch<B: ByteOrder>(
 ) {
     scratch.clear();
     scratch.reserve(num_ordinates);
-    for i in 0..num_ordinates {
+    // Safety: we have already reserved the capacity, so we can set the length safely.
+    // Justification: rewriting the loop to not use Vec::push makes it many times faster,
+    // since it eliminates several memory loads and stores for vector's length and capacity,
+    // and it enables the compiler to generate vectorized code.
+    #[allow(clippy::uninit_vec)]
+    unsafe {
+        scratch.set_len(num_ordinates);
+    }
+    assert!(offset + num_ordinates as u64 * 8 <= buf.len() as u64);
+    for (i, tgt) in scratch.iter_mut().enumerate().take(num_ordinates) {
         let offset = offset + (i as u64 * 8);
         let value = B::read_f64(&buf[offset as usize..]);
-        scratch.push(value);
+        *tgt = value;
     }
 }
