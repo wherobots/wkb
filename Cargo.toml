@@ -12,7 +12,7 @@ categories = ["science::geo"]
 rust-version = "1.82"
 
 [features]
-default = ["geos"]
+default = []
 geos = ["dep:geos"]
 
 [dependencies]

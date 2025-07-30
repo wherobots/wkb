@@ -1,4 +1,4 @@
-use crate::reader::{read_wkb, to_geos::ToGeos};
+use crate::reader::{read_wkb, to_geos::convert};
 use crate::writer::{
     write_geometry_collection, write_line_string, write_multi_line_string, write_multi_point,
     write_multi_polygon, write_point, write_polygon,
@@ -33,9 +33,7 @@ fn test_geometry_conversion(geo_geom: &Geometry, endianness: Endianness) {
     let wkb = read_wkb(&buf).unwrap();
 
     // Convert to GEOS using our ToGeos converter
-    let mut scratch = Vec::new();
-    let mut converter = ToGeos::new(&mut scratch);
-    let geos_geom = converter.to_geos_geometry(&wkb).unwrap();
+    let geos_geom = convert(&wkb).unwrap();
 
     // Convert back to geo for comparison
     let geo_from_geos: Geometry = geos_geom.try_into().unwrap();
@@ -63,9 +61,7 @@ fn test_empty_point_conversion() {
     buf.extend_from_slice(&f64::NAN.to_le_bytes()); // y = NaN
 
     let wkb = read_wkb(&buf).unwrap();
-    let mut scratch = Vec::new();
-    let mut converter = ToGeos::new(&mut scratch);
-    let geos_geom = converter.to_geos_geometry(&wkb).unwrap();
+    let geos_geom = convert(&wkb).unwrap();
 
     assert!(geos_geom.is_empty().unwrap());
 }
@@ -90,9 +86,7 @@ fn test_empty_line_string_conversion() {
     .unwrap();
 
     let wkb = read_wkb(&buf).unwrap();
-    let mut scratch = Vec::new();
-    let mut converter = ToGeos::new(&mut scratch);
-    let geos_geom = converter.to_geos_geometry(&wkb).unwrap();
+    let geos_geom = convert(&wkb).unwrap();
 
     assert!(geos_geom.is_empty().unwrap());
 }
@@ -135,9 +129,7 @@ fn test_empty_multi_point_conversion() {
     .unwrap();
 
     let wkb = read_wkb(&buf).unwrap();
-    let mut scratch = Vec::new();
-    let mut converter = ToGeos::new(&mut scratch);
-    let geos_geom = converter.to_geos_geometry(&wkb).unwrap();
+    let geos_geom = convert(&wkb).unwrap();
 
     assert!(geos_geom.is_empty().unwrap());
 }
@@ -162,9 +154,7 @@ fn test_empty_multi_line_string_conversion() {
     .unwrap();
 
     let wkb = read_wkb(&buf).unwrap();
-    let mut scratch = Vec::new();
-    let mut converter = ToGeos::new(&mut scratch);
-    let geos_geom = converter.to_geos_geometry(&wkb).unwrap();
+    let geos_geom = convert(&wkb).unwrap();
 
     assert!(geos_geom.is_empty().unwrap());
 }
@@ -189,9 +179,7 @@ fn test_empty_multi_polygon_conversion() {
     .unwrap();
 
     let wkb = read_wkb(&buf).unwrap();
-    let mut scratch = Vec::new();
-    let mut converter = ToGeos::new(&mut scratch);
-    let geos_geom = converter.to_geos_geometry(&wkb).unwrap();
+    let geos_geom = convert(&wkb).unwrap();
 
     assert!(geos_geom.is_empty().unwrap());
 }
@@ -216,9 +204,7 @@ fn test_empty_geometry_collection_conversion() {
     .unwrap();
 
     let wkb = read_wkb(&buf).unwrap();
-    let mut scratch = Vec::new();
-    let mut converter = ToGeos::new(&mut scratch);
-    let geos_geom = converter.to_geos_geometry(&wkb).unwrap();
+    let geos_geom = convert(&wkb).unwrap();
 
     assert!(geos_geom.is_empty().unwrap());
 }
@@ -289,42 +275,6 @@ fn test_zero_coordinates() {
 }
 
 #[test]
-fn test_scratch_buffer_reuse() {
-    // Test that the scratch buffer is properly reused across multiple conversions
-    let mut scratch = Vec::new();
-    let mut converter = ToGeos::new(&mut scratch);
-
-    // Convert multiple geometries using the same scratch buffer
-    let geometries = vec![
-        Geometry::Point(point_2d()),
-        Geometry::LineString(linestring_2d()),
-        Geometry::Polygon(polygon_2d()),
-        Geometry::MultiPoint(multi_point_2d()),
-    ];
-
-    for geo_geom in geometries {
-        let mut buf = Vec::new();
-        match &geo_geom {
-            Geometry::Point(p) => write_point(&mut buf, p, Endianness::LittleEndian).unwrap(),
-            Geometry::LineString(ls) => {
-                write_line_string(&mut buf, ls, Endianness::LittleEndian).unwrap()
-            }
-            Geometry::Polygon(p) => write_polygon(&mut buf, p, Endianness::LittleEndian).unwrap(),
-            Geometry::MultiPoint(mp) => {
-                write_multi_point(&mut buf, mp, Endianness::LittleEndian).unwrap()
-            }
-            _ => continue,
-        }
-
-        let wkb = read_wkb(&buf).unwrap();
-        let geos_geom = converter.to_geos_geometry(&wkb).unwrap();
-        let geo_from_geos: Geometry = geos_geom.try_into().unwrap();
-
-        assert_eq!(geo_geom, geo_from_geos);
-    }
-}
-
-#[test]
 fn test_endianness_handling() {
     // Test that both endianness variants work correctly
     let point = point_2d();
@@ -334,18 +284,14 @@ fn test_endianness_handling() {
     let mut buf_le = Vec::new();
     write_point(&mut buf_le, &point_2d(), Endianness::LittleEndian).unwrap();
     let wkb_le = read_wkb(&buf_le).unwrap();
-    let mut scratch_le = Vec::new();
-    let mut converter_le = ToGeos::new(&mut scratch_le);
-    let geos_geom_le = converter_le.to_geos_geometry(&wkb_le).unwrap();
+    let geos_geom_le = convert(&wkb_le).unwrap();
     let geo_from_geos_le: Geometry = geos_geom_le.try_into().unwrap();
 
     // Test big endian
     let mut buf_be = Vec::new();
     write_point(&mut buf_be, &point_2d(), Endianness::BigEndian).unwrap();
     let wkb_be = read_wkb(&buf_be).unwrap();
-    let mut scratch_be = Vec::new();
-    let mut converter_be = ToGeos::new(&mut scratch_be);
-    let geos_geom_be = converter_be.to_geos_geometry(&wkb_be).unwrap();
+    let geos_geom_be = convert(&wkb_be).unwrap();
     let geo_from_geos_be: Geometry = geos_geom_be.try_into().unwrap();
 
     // Both should produce the same result
@@ -372,9 +318,7 @@ fn test_xyz_dimension_handling() {
     buf.extend_from_slice(&20.0f64.to_le_bytes());
 
     let wkb = read_wkb(&buf).unwrap();
-    let mut scratch = Vec::new();
-    let mut converter = ToGeos::new(&mut scratch);
-    let geos_geom = converter.to_geos_geometry(&wkb).unwrap();
+    let geos_geom = convert(&wkb).unwrap();
 
     // Verify the geometry was created successfully
     assert!(!geos_geom.is_empty().unwrap());
@@ -405,9 +349,7 @@ fn test_xym_dimension_handling() {
     buf.extend_from_slice(&200.0f64.to_le_bytes());
 
     let wkb = read_wkb(&buf).unwrap();
-    let mut scratch = Vec::new();
-    let mut converter = ToGeos::new(&mut scratch);
-    let geos_geom = converter.to_geos_geometry(&wkb).unwrap();
+    let geos_geom = convert(&wkb).unwrap();
 
     // Verify the geometry was created successfully
     assert!(!geos_geom.is_empty().unwrap());
@@ -440,9 +382,7 @@ fn test_xyzm_dimension_handling() {
     buf.extend_from_slice(&200.0f64.to_le_bytes());
 
     let wkb = read_wkb(&buf).unwrap();
-    let mut scratch = Vec::new();
-    let mut converter = ToGeos::new(&mut scratch);
-    let geos_geom = converter.to_geos_geometry(&wkb).unwrap();
+    let geos_geom = convert(&wkb).unwrap();
 
     // Verify the geometry was created successfully
     assert!(!geos_geom.is_empty().unwrap());
@@ -473,9 +413,7 @@ fn test_big_endian_xyz_dimension_handling() {
     buf.extend_from_slice(&20.0f64.to_be_bytes());
 
     let wkb = read_wkb(&buf).unwrap();
-    let mut scratch = Vec::new();
-    let mut converter = ToGeos::new(&mut scratch);
-    let geos_geom = converter.to_geos_geometry(&wkb).unwrap();
+    let geos_geom = convert(&wkb).unwrap();
 
     // Verify the geometry was created successfully
     assert!(!geos_geom.is_empty().unwrap());
