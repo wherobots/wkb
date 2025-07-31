@@ -5,15 +5,33 @@ use byteorder::{BigEndian, ByteOrder, LittleEndian};
 use geo_traits::*;
 use geos::GResult;
 
-thread_local!(
-    static SCRATCH: RefCell<Vec<f64>> = const { RefCell::new(Vec::new()) };
-);
+/// A factory for converting WKB to GEOS geometries.
+///
+/// This factory uses a scratch buffer to store intermediate coordinate data.
+/// The scratch buffer is reused for each conversion, which reduces memory allocations.
+pub struct GEOSWkbFactory {
+    scratch: RefCell<Vec<f64>>,
+}
 
-pub fn convert(wkb: &Wkb) -> GResult<geos::Geometry> {
-    SCRATCH.with(|scratch| {
-        let scratch = &mut scratch.borrow_mut();
+impl Default for GEOSWkbFactory {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl GEOSWkbFactory {
+    /// Create a new GEOSWkbFactory.
+    pub fn new() -> Self {
+        Self {
+            scratch: RefCell::new(Vec::new()),
+        }
+    }
+
+    /// Create a GEOS geometry from a WKB.
+    pub fn create(&self, wkb: &Wkb) -> GResult<geos::Geometry> {
+        let scratch = &mut self.scratch.borrow_mut();
         to_geos_geometry(scratch, wkb)
-    })
+    }
 }
 
 fn to_geos_geometry(scratch: &mut Vec<f64>, wkb: &Wkb) -> GResult<geos::Geometry> {
