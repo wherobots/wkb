@@ -20,10 +20,10 @@ const F64_WIDTH: u64 = 8;
 #[derive(Debug, Clone, Copy)]
 pub struct Coord<'a> {
     /// The underlying WKB buffer
-    buf: &'a [u8],
+    pub buf: &'a [u8],
 
     /// The byte order of this WKB buffer
-    byte_order: Endianness,
+    pub byte_order: Endianness,
 
     /// The offset into the buffer where this coordinate is located
     ///
@@ -31,9 +31,9 @@ pub struct Coord<'a> {
     /// `Point` is immediately after the header, but the `Point` also appears in other geometry
     /// types. I.e. the `LineString` has a header, then the number of points, then a sequence of
     /// `Point` objects.
-    offset: u64,
+    pub offset: u64,
 
-    dim: WKBDimension,
+    pub dim: WKBDimension,
 }
 
 impl<'a> Coord<'a> {

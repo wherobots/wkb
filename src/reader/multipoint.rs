@@ -47,7 +47,7 @@ impl<'a> MultiPoint<'a> {
         let num_points = reader
             .read_u32(byte_order)?
             .try_into()
-            .map_err(|e| WKBError::General(format!("Invalid number of points: {}", e)))?;
+            .map_err(|e| WKBError::General(format!("Invalid number of points: {e}")))?;
 
         let multipoint = Self {
             buf,
@@ -68,8 +68,7 @@ impl<'a> MultiPoint<'a> {
     #[cold]
     fn handle_invalid_buffer_length(expected_end_abs: u64, buf_len: usize) -> WKBResult<Self> {
         Err(WKBError::General(format!(
-            "Invalid buffer length for MultiPoint: geometry would end at byte {}, but buffer length is {}.",
-            expected_end_abs, buf_len
+            "Invalid buffer length for MultiPoint: geometry would end at byte {expected_end_abs}, but buffer length is {buf_len}."
         )))
     }
 

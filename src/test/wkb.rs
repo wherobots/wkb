@@ -1,8 +1,13 @@
+use std::str::FromStr;
+
 use geo_traits::to_geo::ToGeoGeometry;
 use geo_traits::{CoordTrait, GeometryTrait, LineStringTrait};
 use geo_types::Geometry;
+use wkt::Wkt;
 
+use crate::common::WKBDimension;
 use crate::reader::read_wkb;
+use crate::test::wkb_cases::get_wkb_test_cases;
 use crate::writer::{
     write_geometry_collection, write_line_string, write_multi_line_string, write_multi_point,
     write_multi_polygon, write_point, write_polygon,
@@ -142,6 +147,20 @@ fn round_trip_geometry_collection() {
     write_geometry_collection(&mut buf, &orig, Endianness::BigEndian).unwrap();
     let retour = read_wkb(&buf).unwrap();
     assert_eq!(Geometry::GeometryCollection(orig), retour.to_geometry());
+}
+
+#[test]
+fn test_comprehensive_cases() {
+    let cases = get_wkb_test_cases();
+    for case in cases {
+        // Skip empty point or non-xy geometries since geo_types does not support them
+        if case.wkt_string.contains("POINT EMPTY") || case.dimension != WKBDimension::Xy {
+            continue;
+        }
+        let wkt: Wkt<f64> = Wkt::from_str(&case.wkt_string).unwrap();
+        let wkb = read_wkb(&case.wkb_bytes).unwrap();
+        assert_eq!(wkt.to_geometry(), wkb.to_geometry());
+    }
 }
 
 #[test]

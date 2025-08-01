@@ -45,7 +45,7 @@ impl<'a> Polygon<'a> {
         let num_rings = reader
             .read_u32(byte_order)?
             .try_into()
-            .map_err(|e| WKBError::General(format!("Invalid number of rings: {}", e)))?;
+            .map_err(|e| WKBError::General(format!("Invalid number of rings: {e}")))?;
 
         // - existing offset into buffer
         // - 1: byteOrder

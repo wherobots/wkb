@@ -17,10 +17,10 @@ use geo_traits_ext::{
 #[derive(Debug, Clone, Copy)]
 pub struct Point<'a> {
     /// The coordinate inside this Point
-    coord: Coord<'a>,
-    dim: WKBDimension,
-    is_empty: bool,
-    has_srid: bool,
+    pub coord: Coord<'a>,
+    pub dim: WKBDimension,
+    pub is_empty: bool,
+    pub has_srid: bool,
 }
 
 impl<'a> Point<'a> {
@@ -78,8 +78,7 @@ impl<'a> Point<'a> {
         buf_len: usize,
     ) -> WKBResult<Self> {
         Err(WKBError::General(format!(
-            "Invalid buffer length for Point: geometry starting at offset {} would end at byte {}, but buffer length is {}.",
-            offset, expected_end, buf_len
+            "Invalid buffer length for Point: geometry starting at offset {offset} would end at byte {expected_end}, but buffer length is {buf_len}."
         )))
     }
 

@@ -36,7 +36,7 @@ impl<'a> GeometryCollection<'a> {
         let num_geometries = reader
             .read_u32(byte_order)?
             .try_into()
-            .map_err(|e| WKBError::General(format!("Invalid number of geometries: {}", e)))?;
+            .map_err(|e| WKBError::General(format!("Invalid number of geometries: {e}")))?;
 
         // - 1: byteOrder
         // - 4: wkbType

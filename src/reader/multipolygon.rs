@@ -46,7 +46,7 @@ impl<'a> MultiPolygon<'a> {
         let num_polygons = reader
             .read_u32(byte_order)?
             .try_into()
-            .map_err(|e| WKBError::General(format!("Invalid number of polygons: {}", e)))?;
+            .map_err(|e| WKBError::General(format!("Invalid number of polygons: {e}")))?;
 
         // - 1: byteOrder
         // - 4: wkbType

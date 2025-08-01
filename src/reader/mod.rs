@@ -33,3 +33,6 @@ use crate::error::WKBResult;
 pub fn read_wkb(buf: &[u8]) -> WKBResult<Wkb> {
     Wkb::try_new(buf)
 }
+
+#[cfg(feature = "geos")]
+pub mod to_geos;

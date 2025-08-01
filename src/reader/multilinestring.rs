@@ -46,7 +46,7 @@ impl<'a> MultiLineString<'a> {
         let num_line_strings = reader
             .read_u32(byte_order)?
             .try_into()
-            .map_err(|e| WKBError::General(format!("Invalid number of line strings: {}", e)))?;
+            .map_err(|e| WKBError::General(format!("Invalid number of line strings: {e}")))?;
 
         // - 1: byteOrder
         // - 4: wkbType
