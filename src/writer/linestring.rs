@@ -21,7 +21,7 @@ pub fn write_line_string(
     endianness: Endianness,
 ) -> WKBResult<()> {
     // Byte order
-    writer.write_u8(endianness.into()).unwrap();
+    writer.write_u8(endianness.into())?;
 
     // Content
     match endianness {
@@ -38,9 +38,7 @@ fn write_line_string_content<B: ByteOrder>(
     writer.write_u32::<B>(wkb_type.into())?;
 
     // numPoints
-    writer
-        .write_u32::<B>(geom.num_coords().try_into().unwrap())
-        .unwrap();
+    writer.write_u32::<B>(geom.num_coords().try_into()?)?;
 
     for coord in geom.coords() {
         write_coord::<B>(writer, &coord)?;
