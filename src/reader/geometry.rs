@@ -13,8 +13,8 @@ use crate::reader::{
 };
 use crate::Endianness;
 use geo_traits::{
-    Dimensions, GeometryTrait, GeometryType, UnimplementedLine, UnimplementedRect,
-    UnimplementedTriangle,
+    Dimensions, GeometryCollectionTrait, GeometryTrait, GeometryType, UnimplementedLine,
+    UnimplementedRect, UnimplementedTriangle,
 };
 
 use super::linearring::WKBLinearRing;
@@ -278,8 +278,34 @@ where
     }
 }
 
-impl GeometryTraitExt for Wkb<'_> {
+impl<'a> GeometryTraitExt for Wkb<'a> {
     forward_geometry_trait_ext_funcs!(f64);
+
+    type InnerGeometryRef<'b>
+        = &'b Wkb<'a>
+    where
+        Self: 'b;
+
+    fn geometry_ext(&self, i: usize) -> Option<Self::InnerGeometryRef<'_>> {
+        let GeometryType::GeometryCollection(gc) = self.as_type() else {
+            return None;
+        };
+        gc.geometry(i)
+    }
+
+    unsafe fn geometry_unchecked_ext(&self, i: usize) -> Self::InnerGeometryRef<'_> {
+        let GeometryType::GeometryCollection(gc) = self.as_type() else {
+            panic!("Called geometry_unchecked_ext on a non-GeometryCollection geometry");
+        };
+        gc.geometry_unchecked(i)
+    }
+
+    fn geometries_ext(&self) -> impl Iterator<Item = Self::InnerGeometryRef<'_>> {
+        let GeometryType::GeometryCollection(gc) = self.as_type() else {
+            panic!("Called geometries_ext on a non-GeometryCollection geometry");
+        };
+        gc.geometries()
+    }
 }
 
 impl<'a, 'b> GeometryTraitExt for &'b Wkb<'a>
@@ -287,6 +313,26 @@ where
     'a: 'b,
 {
     forward_geometry_trait_ext_funcs!(f64);
+
+    type InnerGeometryRef<'c>
+        = &'b Wkb<'a>
+    where
+        Self: 'c;
+
+    fn geometry_ext(&self, i: usize) -> Option<Self::InnerGeometryRef<'_>> {
+        let g = *self;
+        g.geometry_ext(i)
+    }
+
+    unsafe fn geometry_unchecked_ext(&self, i: usize) -> Self::InnerGeometryRef<'_> {
+        let g = *self;
+        g.geometry_unchecked_ext(i)
+    }
+
+    fn geometries_ext(&self) -> impl Iterator<Item = Self::InnerGeometryRef<'_>> {
+        let g = *self;
+        g.geometries_ext()
+    }
 }
 
 impl GeoTraitExtWithTypeTag for Wkb<'_> {
